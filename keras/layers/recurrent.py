@@ -175,8 +175,9 @@ class GRU(Layer):
     def __init__(self, input_dim, output_dim=128, 
         init='glorot_uniform', inner_init='orthogonal',
         activation='sigmoid', inner_activation='hard_sigmoid',
-        weights=None, truncate_gradient=-1, return_sequences=False):
+        weights=None, truncate_gradient=-1, return_sequences=False, backward = False):
 
+        self.backwards = backwards
         self.input_dim = input_dim
         self.output_dim = output_dim
         self.truncate_gradient = truncate_gradient
@@ -226,13 +227,16 @@ class GRU(Layer):
         x_z = T.dot(X, self.W_z) + self.b_z
         x_r = T.dot(X, self.W_r) + self.b_r
         x_h = T.dot(X, self.W_h) + self.b_h
+        
         outputs, updates = theano.scan(
-            self._step, 
-            sequences=[x_z, x_r, x_h], 
-            outputs_info=alloc_zeros_matrix(X.shape[1], self.output_dim),
-            non_sequences=[self.U_z, self.U_r, self.U_h],
-            truncate_gradient=self.truncate_gradient
-        )
+                self._step, 
+                sequences=[x_z, x_r, x_h], 
+                outputs_info=alloc_zeros_matrix(X.shape[1], self.output_dim),
+                non_sequences=[self.U_z, self.U_r, self.U_h],
+                truncate_gradient=self.truncate_gradient,
+                go_backwards=self.backwards
+            )
+        
         if self.return_sequences:
             return outputs.dimshuffle((1,0,2))
         return outputs[-1]
